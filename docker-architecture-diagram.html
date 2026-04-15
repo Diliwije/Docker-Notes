@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Docker Architecture Diagram</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Syne:wght@700;800&display=swap');
+
+    :root {
+      --client:   #00D4FF;
+      --daemon:   #FF6B35;
+      --compose:  #B06EFF;
+      --registry: #FFD700;
+      --hub:      #00E676;
+      --bg:       #080C18;
+      --card:     #0D1220;
+      --border:   #1A2540;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px 60px;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      animation: fadeDown 0.7s ease both;
+    }
+    header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, var(--client), var(--compose), var(--hub));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 20px #00d4ff44);
+    }
+    header p {
+      color: #445;
+      font-size: .75rem;
+      letter-spacing: .12em;
+      margin-top: 6px;
+    }
+
+    /* ── SVG wrapper ── */
+    .diagram-wrap {
+      width: 100%;
+      max-width: 960px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 12px;
+      box-shadow: 0 0 80px #00d4ff0f, 0 30px 80px #0008;
+      animation: fadeUp 0.8s ease both 0.2s;
+    }
+
+    svg { display: block; width: 100%; }
+
+    /* ── Node boxes ── */
+    .node rect {
+      transition: filter .3s, stroke-width .3s;
+      filter: drop-shadow(0 0 10px var(--c));
+    }
+    .node:hover rect {
+      filter: drop-shadow(0 0 22px var(--c));
+      stroke-width: 3 !important;
+    }
+    .node text { pointer-events: none; }
+
+    /* ── Edges ── */
+    .edge-path {
+      transition: opacity .3s;
+    }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 14px 28px;
+      margin-top: 28px;
+      animation: fadeUp 0.8s ease both 0.5s;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .72rem;
+      color: #667;
+    }
+    .legend-line {
+      width: 30px;
+      height: 3px;
+      border-radius: 2px;
+    }
+    .legend-line.dashed {
+      background: repeating-linear-gradient(90deg, currentColor 0, currentColor 5px, transparent 5px, transparent 10px);
+    }
+
+    /* ── Component table ── */
+    .table-wrap {
+      width: 100%;
+      max-width: 960px;
+      margin-top: 40px;
+      animation: fadeUp 0.8s ease both 0.6s;
+    }
+    .table-wrap h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: #556;
+      margin-bottom: 14px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .78rem;
+    }
+    thead tr { background: #0D1628; }
+    thead th {
+      text-align: left;
+      padding: 12px 16px;
+      color: #556;
+      letter-spacing: .08em;
+      font-size: .7rem;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr {
+      border-bottom: 1px solid #111a2e;
+      transition: background .2s;
+    }
+    tbody tr:hover { background: #0f1830; }
+    td { padding: 12px 16px; line-height: 1.55; color: #bbb; }
+    td:first-child { width: 180px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 12px;
+      border-radius: 30px;
+      font-weight: 700;
+      font-size: .75rem;
+      border: 1.5px solid;
+      white-space: nowrap;
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeDown { from { opacity:0; transform:translateY(-18px); } to { opacity:1; transform:none; } }
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(18px);  } to { opacity:1; transform:none; } }
+    @keyframes dash { to { stroke-dashoffset: -30; } }
+
+    .animated-edge {
+      stroke-dasharray: 6 4;
+      animation: dash 1.8s linear infinite;
+    }
+    .flow-edge {
+      stroke-dasharray: 200;
+      stroke-dashoffset: 200;
+      animation: drawEdge 1.2s ease forwards;
+    }
+    @keyframes drawEdge {
+      to { stroke-dashoffset: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🐳 Docker Architecture</h1>
+  <p>Component Connection Diagram — for Docker Notes</p>
+</header>
+
+<div class="diagram-wrap">
+<svg viewBox="0 0 940 560" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Grid -->
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0L0 0 0 40" fill="none" stroke="#ffffff07" stroke-width="1"/>
+    </pattern>
+
+    <!-- Glow filters -->
+    <filter id="glow-client"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="glow-daemon"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="glow-compose"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="glow-hub"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="glow-registry"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+
+    <!-- Arrow markers -->
+    <marker id="arr-client"   markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#00D4FF"/></marker>
+    <marker id="arr-daemon"   markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#FF6B35"/></marker>
+    <marker id="arr-compose"  markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#B06EFF"/></marker>
+    <marker id="arr-hub"      markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#00E676"/></marker>
+    <marker id="arr-registry" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#FFD700"/></marker>
+    <marker id="arr-both"     markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#FF6B35"/></marker>
+    <marker id="arr-both-s"   markerWidth="8" markerHeight="8" refX="1" refY="3" orient="auto"><path d="M8,0 L8,6 L0,3 z" fill="#FF6B35"/></marker>
+
+    <!-- Node bg gradients -->
+    <linearGradient id="ng-client"   x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00D4FF" stop-opacity=".22"/><stop offset="100%" stop-color="#00D4FF" stop-opacity=".06"/></linearGradient>
+    <linearGradient id="ng-daemon"   x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FF6B35" stop-opacity=".22"/><stop offset="100%" stop-color="#FF6B35" stop-opacity=".06"/></linearGradient>
+    <linearGradient id="ng-compose"  x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#B06EFF" stop-opacity=".22"/><stop offset="100%" stop-color="#B06EFF" stop-opacity=".06"/></linearGradient>
+    <linearGradient id="ng-hub"      x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00E676" stop-opacity=".22"/><stop offset="100%" stop-color="#00E676" stop-opacity=".06"/></linearGradient>
+    <linearGradient id="ng-registry" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFD700" stop-opacity=".22"/><stop offset="100%" stop-color="#FFD700" stop-opacity=".06"/></linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="940" height="560" fill="#080C18" rx="12"/>
+  <rect width="940" height="560" fill="url(#grid)" rx="12"/>
+
+  <!-- ════════════════════════════════ EDGES ════════════════════════════════ -->
+
+  <!-- Client → Daemon (main command flow) -->
+  <path class="flow-edge" d="M 220 255 L 360 255" stroke="#00D4FF" stroke-width="2.5" fill="none" marker-end="url(#arr-client)" style="animation-delay:.1s"/>
+  <text x="290" y="244" text-anchor="middle" font-size="9" fill="#00D4FF" font-family="JetBrains Mono" opacity=".9">docker commands</text>
+
+  <!-- Compose → Daemon -->
+  <path class="flow-edge" d="M 480 160 L 480 210" stroke="#B06EFF" stroke-width="2.5" fill="none" marker-end="url(#arr-compose)" style="animation-delay:.25s"/>
+  <text x="512" y="193" text-anchor="start" font-size="9" fill="#B06EFF" font-family="JetBrains Mono" opacity=".9">orchestrates</text>
+
+  <!-- Compose → Client (curved, dashed) -->
+  <path class="animated-edge" d="M 360 110 Q 240 80 170 185" stroke="#B06EFF" stroke-width="1.8" fill="none" marker-end="url(#arr-compose)" opacity=".7"/>
+  <text x="235" y="106" text-anchor="middle" font-size="9" fill="#B06EFF" font-family="JetBrains Mono" opacity=".75">uses CLI</text>
+
+  <!-- Daemon → Docker Hub -->
+  <path class="flow-edge" d="M 600 230 Q 700 180 720 160" stroke="#00E676" stroke-width="2.5" fill="none" marker-end="url(#arr-hub)" style="animation-delay:.4s"/>
+  <text x="680" y="178" text-anchor="middle" font-size="9" fill="#00E676" font-family="JetBrains Mono" opacity=".9">push / pull</text>
+
+  <!-- Daemon → Registry -->
+  <path class="flow-edge" d="M 600 290 Q 700 340 720 370" stroke="#FFD700" stroke-width="2.5" fill="none" marker-end="url(#arr-registry)" style="animation-delay:.55s"/>
+  <text x="690" y="348" text-anchor="middle" font-size="9" fill="#FFD700" font-family="JetBrains Mono" opacity=".9">push / pull</text>
+
+  <!-- Hub ↔ Registry (bidirectional, dashed) -->
+  <path class="animated-edge" d="M 800 175 Q 840 270 800 365" stroke="#FF6B35" stroke-width="1.8" fill="none" marker-end="url(#arr-both)" marker-start="url(#arr-both-s)" opacity=".75"/>
+  <text x="862" y="278" text-anchor="middle" font-size="9" fill="#FF6B35" font-family="JetBrains Mono" opacity=".8">mirrors /
+  <tspan x="862" dy="12">caches</tspan></text>
+
+  <!-- ════════════════════════════════ NODES ════════════════════════════════ -->
+
+  <!-- Docker Client  x=30 y=210  w=190 h=90 -->
+  <g class="node" style="--c:#00D4FF" filter="url(#glow-client)">
+    <rect x="30" y="210" width="190" height="90" rx="14" fill="url(#ng-client)" stroke="#00D4FF" stroke-width="2"/>
+    <text x="125" y="240" text-anchor="middle" font-size="22">⌨️</text>
+    <text x="125" y="264" text-anchor="middle" font-size="13" fill="#00D4FF" font-family="JetBrains Mono" font-weight="700">Docker Client</text>
+    <text x="125" y="281" text-anchor="middle" font-size="9"  fill="#667" font-family="JetBrains Mono">CLI · REST API</text>
+  </g>
+
+  <!-- Docker Daemon  x=360 y=210  w=240 h=90 -->
+  <g class="node" style="--c:#FF6B35" filter="url(#glow-daemon)">
+    <rect x="360" y="210" width="240" height="90" rx="14" fill="url(#ng-daemon)" stroke="#FF6B35" stroke-width="2"/>
+    <text x="480" y="240" text-anchor="middle" font-size="22">⚙️</text>
+    <text x="480" y="264" text-anchor="middle" font-size="13" fill="#FF6B35" font-family="JetBrains Mono" font-weight="700">Docker Daemon</text>
+    <text x="480" y="281" text-anchor="middle" font-size="9"  fill="#667" font-family="JetBrains Mono">dockerd · manages objects</text>
+  </g>
+
+  <!-- Docker Compose  x=360 y=60  w=240 h=90 -->
+  <g class="node" style="--c:#B06EFF" filter="url(#glow-compose)">
+    <rect x="360" y="60" width="240" height="90" rx="14" fill="url(#ng-compose)" stroke="#B06EFF" stroke-width="2"/>
+    <text x="480" y="90" text-anchor="middle" font-size="22">📋</text>
+    <text x="480" y="114" text-anchor="middle" font-size="13" fill="#B06EFF" font-family="JetBrains Mono" font-weight="700">Docker Compose</text>
+    <text x="480" y="131" text-anchor="middle" font-size="9"  fill="#667" font-family="JetBrains Mono">multi-container orchestration</text>
+  </g>
+
+  <!-- Docker Hub  x=720 y=90  w=190 h=90 -->
+  <g class="node" style="--c:#00E676" filter="url(#glow-hub)">
+    <rect x="720" y="90" width="190" height="90" rx="14" fill="url(#ng-hub)" stroke="#00E676" stroke-width="2"/>
+    <text x="815" y="120" text-anchor="middle" font-size="22">☁️</text>
+    <text x="815" y="144" text-anchor="middle" font-size="13" fill="#00E676" font-family="JetBrains Mono" font-weight="700">Docker Hub</text>
+    <text x="815" y="161" text-anchor="middle" font-size="9"  fill="#667" font-family="JetBrains Mono">public cloud registry</text>
+  </g>
+
+  <!-- Docker Registry  x=720 y=360  w=190 h=90 -->
+  <g class="node" style="--c:#FFD700" filter="url(#glow-registry)">
+    <rect x="720" y="360" width="190" height="90" rx="14" fill="url(#ng-registry)" stroke="#FFD700" stroke-width="2"/>
+    <text x="815" y="390" text-anchor="middle" font-size="22">🗄️</text>
+    <text x="815" y="414" text-anchor="middle" font-size="13" fill="#FFD700" font-family="JetBrains Mono" font-weight="700">Docker Registry</text>
+    <text x="815" y="431" text-anchor="middle" font-size="9"  fill="#667" font-family="JetBrains Mono">private image storage</text>
+  </g>
+
+  <!-- ════════ bottom caption ════════ -->
+  <text x="470" y="540" text-anchor="middle" font-size="9" fill="#2A3550" font-family="JetBrains Mono">🐳 Docker Architecture · for Docker Notes</text>
+</svg>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-line" style="background:#00D4FF; box-shadow:0 0 6px #00D4FF"></div> Client → Daemon commands</div>
+  <div class="legend-item"><div class="legend-line" style="background:#B06EFF; box-shadow:0 0 6px #B06EFF"></div> Compose orchestration</div>
+  <div class="legend-item"><div class="legend-line" style="background:#00E676; box-shadow:0 0 6px #00E676"></div> Hub push / pull</div>
+  <div class="legend-item"><div class="legend-line" style="background:#FFD700; box-shadow:0 0 6px #FFD700"></div> Registry push / pull</div>
+  <div class="legend-item"><div class="legend-line dashed" style="color:#FF6B35"></div> Hub ↔ Registry sync</div>
+  <div class="legend-item"><div class="legend-line dashed" style="color:#B06EFF"></div> Compose → Client (CLI)</div>
+</div>
+
+<!-- Component reference table -->
+<div class="table-wrap">
+  <h2>// Component Reference</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>COMPONENT</th>
+        <th>ROLE</th>
+        <th>KEY COMMANDS / NOTES</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge" style="color:#00D4FF; border-color:#00D4FF">⌨️ Docker Client</span></td>
+        <td>Sends user commands to the Docker Daemon via REST API or Unix socket.</td>
+        <td><code>docker build</code> · <code>docker run</code> · <code>docker pull</code> · <code>docker push</code></td>
+      </tr>
+      <tr>
+        <td><span class="badge" style="color:#FF6B35; border-color:#FF6B35">⚙️ Docker Daemon</span></td>
+        <td>Core engine (dockerd). Manages containers, images, volumes, networks. Responds to Client API calls.</td>
+        <td>Runs as background service · exposes <code>/var/run/docker.sock</code></td>
+      </tr>
+      <tr>
+        <td><span class="badge" style="color:#B06EFF; border-color:#B06EFF">📋 Docker Compose</span></td>
+        <td>Reads <code>docker-compose.yml</code> to define and run multi-container applications.</td>
+        <td><code>docker compose up</code> · <code>docker compose down</code> · <code>docker compose build</code></td>
+      </tr>
+      <tr>
+        <td><span class="badge" style="color:#00E676; border-color:#00E676">☁️ Docker Hub</span></td>
+        <td>Official public cloud registry hosted by Docker Inc. Millions of public images available.</td>
+        <td><code>docker pull nginx</code> · <code>docker push user/image:tag</code> · hub.docker.com</td>
+      </tr>
+      <tr>
+        <td><span class="badge" style="color:#FFD700; border-color:#FFD700">🗄️ Docker Registry</span></td>
+        <td>Self-hosted private registry for storing images within an org or locally.</td>
+        <td><code>docker run -d -p 5000:5000 registry:2</code> · configurable with TLS &amp; auth</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>
